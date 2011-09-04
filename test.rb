@@ -55,7 +55,22 @@ class FoolproofTest < Test::Unit::TestCase
   def test_hardcoded_if
     assert_file_rejected "
       if true
+       puts 'it\'s true!'
+      end
     "
+  end
+
+  def test_complex_hardcoded_if
+    assert_file_rejected "
+      if var_name || true
+       puts 'is it?'
+      end
+    "
+  end
+
+  def test_parser_keyword_values
+    sexp = [:paren, [:stmts_add, [:stmts_new], [:binary, [:binary, [:binary, [:method_add_arg, [:fcall, [:@ident, "foobar", [3, 5]]], [:arg_paren, [:args_add_block, [:args_add, [:args_new], [:@int, "42", [3, 12]]], false]]], :"&&", [:var_ref, [:@ident, "get_name", [3, 19]]]], :"||", [:var_ref, [:@kw, "false", [3, 31]]]], :"||", [:binary, [:@int, "42", [3, 40]], :"&&", [:var_ref, [:@kw, "nil", [3, 46]]]]]]]
+    assert_equal FoolproofParserUtils.new.keyword_values(sexp).sort, ['false', 'nil', 'true']
   end
 end
 
@@ -162,4 +177,18 @@ class FoolproofTestIntegration < Test::Unit::TestCase
 
     assert_git_success
   end
+
+  def test_hardcoded_if_true
+    add_file(File.join('hardcoded_if.rb'))
+    git_commit('-m "adding a file with a hardcoded if true"')
+
+    assert_git_fail
+  end
+
+  # def test_complex_hardcoded_if
+  #   add_file(File.join('complex_hardcoded_if.rb'))
+  #   git_commit('-m "adding a file with a complex hardcoded if"')
+
+  #   assert_git_fail
+  # end
 end
