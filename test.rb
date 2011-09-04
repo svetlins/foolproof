@@ -72,22 +72,27 @@ class FoolproofTestIntegration < Test::Unit::TestCase
     end
   end
 
-  def add_file(file_name, content = nil)
+  def add_file(file_path, content = nil)
+    file_dir_structure = File.split(file_path)[0...-1]
+    file_name = File.split(file_path)[-1]
+
     if content.nil?
       File.open(test_file_path(file_name)) do |file|
         content = file.read
       end
     end
 
-    File.open(file_name, 'w') do |file|
+    FileUtils.makedirs(file_dir_structure)
+
+    File.open(file_path, 'w') do |file|
       file.write(content)
     end
 
-    git_add(file_name)
+    git_add(file_path)
   end
 
   def install_pre_commit_hook
-    Dir.mkdir('.git/hooks/lib')
+    Dir.mkdir(File.join('.git', 'hooks', 'lib'))
 
     FileUtils.cp(File.join(BASE_DIR, 'lib', 'foolproof.rb'), File.join('.git', 'hooks', 'lib', 'foolproof.rb'))
 
@@ -120,7 +125,7 @@ class FoolproofTestIntegration < Test::Unit::TestCase
       'README',
       "This is a test git repository.
        If you see it that means something went wrong.
-       It\'s safe to delete it"
+       It's safe to delete it"
     )
     git_commit('-m "initial commit"') # We have a HEAD now :)
   end
@@ -139,7 +144,21 @@ class FoolproofTestIntegration < Test::Unit::TestCase
 
   def test_basic_accept
     add_file('good_file.rb')
-    git_commit('-m "adding file with a forgotten debugger"')
+    git_commit('-m "adding a good file that shouldn\'t stop commit"')
+
+    assert_git_success
+  end
+
+  def test_nested_reject
+    add_file(File.join('lib', 'nested', 'file', 'forgotten_debugger.rb'))
+    git_commit('-m "adding a nested file with a forgotten debugger"')
+
+    assert_git_fail
+  end
+
+  def test_nested_accept
+    add_file(File.join('lib', 'nested', 'file', 'good_file.rb'))
+    git_commit('-m "adding a good nested file"')
 
     assert_git_success
   end
