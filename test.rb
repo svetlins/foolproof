@@ -1,5 +1,6 @@
 require 'test/unit'
 require 'lib/foolproof.rb'
+require 'fileutils'
 
 
 module TestFiles
@@ -67,7 +68,7 @@ class FoolproofTestIntegration < Test::Unit::TestCase
   # Delegate to git
   ['init', 'commit', 'add'].each do |git_command|
     define_method "git_#{git_command}" do |*args|
-      `git #{git_command} #{args.join(' ')}`
+      `git #{git_command} #{args.join(' ')} > /dev/null 2> /dev/null`
     end
   end
 
@@ -86,11 +87,18 @@ class FoolproofTestIntegration < Test::Unit::TestCase
   end
 
   def install_pre_commit_hook
-    File.open('.git/hooks/pre-commit', 'w') do |file|
-      file.write("#!/usr/bin/env ruby
-                 exit(1)
-                 ")
-      file.chmod(0744) # Make executable
+    Dir.mkdir('.git/hooks/lib')
+
+    FileUtils.cp(File.join(BASE_DIR, 'lib', 'foolproof.rb'), File.join('.git', 'hooks', 'lib', 'foolproof.rb'))
+
+    File.open(File.join('.git', 'hooks', 'pre-commit'), 'w') do |install_to|
+      File.open(File.join(BASE_DIR, 'lib', 'pre-commit.rb')) do |install_from|
+        install_to.write(
+          install_from.read
+        )
+
+        install_to.chmod(0744) # Make executable
+      end
     end
   end
 
@@ -108,7 +116,12 @@ class FoolproofTestIntegration < Test::Unit::TestCase
 
     git_init
     install_pre_commit_hook
-    add_file('README', 'This is a test git repository. If you see it that means something went wrong. It\'s safe to delete it')
+    add_file(
+      'README',
+      "This is a test git repository.
+       If you see it that means something went wrong.
+       It\'s safe to delete it"
+    )
     git_commit('-m "initial commit"') # We have a HEAD now :)
   end
 
@@ -117,10 +130,17 @@ class FoolproofTestIntegration < Test::Unit::TestCase
     `rm -rf #{TEST_GIT_DIR_NAME}`
   end
 
-  def test_basic
+  def test_basic_reject
     add_file('forgotten_debugger.rb')
     git_commit('-m "adding file with a forgotten debugger"')
 
     assert_git_fail
+  end
+
+  def test_basic_accept
+    add_file('good_file.rb')
+    git_commit('-m "adding file with a forgotten debugger"')
+
+    assert_git_success
   end
 end

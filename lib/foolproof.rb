@@ -5,3 +5,14 @@ def bad_content?(content)
 
   return false
 end
+
+def changed_files
+  has_head = system('git show HEAD')
+
+  if has_head
+    `git diff-index --cached --name-only HEAD --`.strip.split("\n")
+  else
+    []
+  end
+
+end
