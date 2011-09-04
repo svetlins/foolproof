@@ -1,3 +1,7 @@
 def bad_content?(content)
-  return true
+  ['debugger', 'if true'].each do |forbidden_string|
+    return true if content.include? forbidden_string
+  end
+
+  return false
 end
