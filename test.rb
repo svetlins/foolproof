@@ -85,6 +85,15 @@ class FoolproofTestIntegration < Test::Unit::TestCase
     git_add(file_name)
   end
 
+  def install_pre_commit_hook
+    File.open('.git/hooks/pre-commit', 'w') do |file|
+      file.write("#!/usr/bin/env ruby
+                 exit(1)
+                 ")
+      file.chmod(0744) # Make executable
+    end
+  end
+
   def assert_git_fail
     assert_not_equal $?.exitstatus, 0, 'git didn\'t fail'
   end
@@ -98,6 +107,7 @@ class FoolproofTestIntegration < Test::Unit::TestCase
     Dir.chdir(TEST_GIT_DIR_NAME)
 
     git_init
+    install_pre_commit_hook
     add_file('README', 'This is a test git repository. If you see it that means something went wrong. It\'s safe to delete it')
     git_commit('-m "initial commit"') # We have a HEAD now :)
   end
