@@ -69,6 +69,22 @@ class FoolproofTest < Test::Unit::TestCase
     "
   end
 
+  def test_invalid_code
+    assert_file_rejected "
+      iftrup this code should not pass
+        puts 'test123'
+      end
+    "
+
+    assert_file_rejected "
+      'it's a good life'
+    "
+
+    assert_file_rejected "
+      if ((true && false || nil)
+    "
+  end
+
   def test_parser_keyword_values
     # [if true]
     sexp = [:var_ref, [:@kw, "true", [3, 4]]]

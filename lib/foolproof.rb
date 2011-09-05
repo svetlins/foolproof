@@ -43,6 +43,10 @@ class FoolproofParser < Ripper::SexpBuilder
     end
   end
 
+  def on_parse_error(*args)
+    @invalid = true
+  end
+
   def invalid?
     @invalid
   end
