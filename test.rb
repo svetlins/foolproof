@@ -55,9 +55,10 @@ class FoolproofTest < Test::Unit::TestCase
   def test_hardcoded_if
     assert_file_rejected "
       if true
-       puts 'it\'s true!'
+       puts 'it\\'s true!'
       end
     "
+
   end
 
   def test_complex_hardcoded_if
@@ -69,8 +70,14 @@ class FoolproofTest < Test::Unit::TestCase
   end
 
   def test_parser_keyword_values
+    # [if true]
+    sexp = [:var_ref, [:@kw, "true", [3, 4]]]
+    assert_equal ['true'], FoolproofParser.new('').keyword_values([sexp])
+
+    # if (foobar(42) && get_name || false || 42 && nil || (bla && get_foo(true)))
     sexp = [:paren, [:stmts_add, [:stmts_new], [:binary, [:binary, [:binary, [:binary, [:method_add_arg, [:fcall, [:@ident, "foobar", [3, 5]]], [:arg_paren, [:args_add_block, [:args_add, [:args_new], [:@int, "42", [3, 12]]], false]]], :"&&", [:var_ref, [:@ident, "get_name", [3, 19]]]], :"||", [:var_ref, [:@kw, "false", [3, 31]]]], :"||", [:binary, [:@int, "42", [3, 40]], :"&&", [:var_ref, [:@kw, "nil", [3, 46]]]]], :"||", [:paren, [:stmts_add, [:stmts_new], [:binary, [:var_ref, [:@ident, "bla", [3, 54]]], :"&&", [:method_add_arg, [:fcall, [:@ident, "get_foo", [3, 61]]], [:arg_paren, [:args_add_block, [:args_add, [:args_new], [:var_ref, [:@kw, "true", [3, 69]]]], false]]]]]]]]]
-    assert_equal FoolproofParser.new.keyword_values(sexp).sort, ['false', 'nil', 'true']
+    assert_equal ['false', 'nil', 'true'].sort, FoolproofParser.new('').keyword_values(sexp).sort
+
   end
 end
 

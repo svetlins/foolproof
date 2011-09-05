@@ -1,7 +1,9 @@
 require 'ripper'
 
 class FoolproofParser < Ripper::SexpBuilder
-  def initialize
+  def initialize(code)
+    super(code)
+
     @invalid = nil
   end
 
@@ -36,16 +38,24 @@ class FoolproofParser < Ripper::SexpBuilder
   end
 
   def on_if(cond, then_clause, else_clause)
-    if keyword_values(cond).any?
+    if keyword_values([cond]).any?
       @invalid = true
     end
+  end
+
+  def invalid?
+    @invalid
   end
 end
 
 def bad_content?(content)
-  ['debugger', 'if true'].each do |forbidden_string|
+  ['debugger'].each do |forbidden_string|
     return true if content.include? forbidden_string
   end
+
+  parser = FoolproofParser.new(content)
+  parser.parse
+  return true if parser.invalid?
 
   return false
 end
