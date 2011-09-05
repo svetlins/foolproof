@@ -1,1 +1,0 @@
-git diff-index --cached --name-only HEAD --
