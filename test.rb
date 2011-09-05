@@ -69,8 +69,8 @@ class FoolproofTest < Test::Unit::TestCase
   end
 
   def test_parser_keyword_values
-    sexp = [:paren, [:stmts_add, [:stmts_new], [:binary, [:binary, [:binary, [:method_add_arg, [:fcall, [:@ident, "foobar", [3, 5]]], [:arg_paren, [:args_add_block, [:args_add, [:args_new], [:@int, "42", [3, 12]]], false]]], :"&&", [:var_ref, [:@ident, "get_name", [3, 19]]]], :"||", [:var_ref, [:@kw, "false", [3, 31]]]], :"||", [:binary, [:@int, "42", [3, 40]], :"&&", [:var_ref, [:@kw, "nil", [3, 46]]]]]]]
-    assert_equal FoolproofParserUtils.new.keyword_values(sexp).sort, ['false', 'nil', 'true']
+    sexp = [:paren, [:stmts_add, [:stmts_new], [:binary, [:binary, [:binary, [:binary, [:method_add_arg, [:fcall, [:@ident, "foobar", [3, 5]]], [:arg_paren, [:args_add_block, [:args_add, [:args_new], [:@int, "42", [3, 12]]], false]]], :"&&", [:var_ref, [:@ident, "get_name", [3, 19]]]], :"||", [:var_ref, [:@kw, "false", [3, 31]]]], :"||", [:binary, [:@int, "42", [3, 40]], :"&&", [:var_ref, [:@kw, "nil", [3, 46]]]]], :"||", [:paren, [:stmts_add, [:stmts_new], [:binary, [:var_ref, [:@ident, "bla", [3, 54]]], :"&&", [:method_add_arg, [:fcall, [:@ident, "get_foo", [3, 61]]], [:arg_paren, [:args_add_block, [:args_add, [:args_new], [:var_ref, [:@kw, "true", [3, 69]]]], false]]]]]]]]]
+    assert_equal FoolproofParser.new.keyword_values(sexp).sort, ['false', 'nil', 'true']
   end
 end
 

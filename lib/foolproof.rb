@@ -5,15 +5,36 @@ class FoolproofParser < Ripper::SexpBuilder
     @invalid = nil
   end
 
-  def keyword_values(sexp)
-    sexp.map do |sub_exp|
-      if keyword_value?(sub_exp)
-        keyword_value(sub_exp)
-      else
-        keyword_values(sub_exp)
-      end
-    end.flatten
+  def keyword_value?(sexp)
+    conds = [
+      proc { sexp.is_a? Array },
+      proc { sexp.size == 2 },
+      proc { sexp.first == :var_ref },
+      proc { sexp.last.first == :@kw },
+      proc { ['true', 'false', 'nil'].include? sexp.last[1] }
+    ]
+
+    return conds.all? { |cond| cond.call }
   end
+
+  def keyword_value(sexp)
+    sexp.last[1]
+  end
+
+  def keyword_values(sexp)
+    if sexp.is_a? Array
+      sexp.map do |sub_exp|
+        if keyword_value?(sub_exp)
+          keyword_value(sub_exp)
+        else
+          keyword_values(sub_exp)
+        end
+      end.flatten
+    else
+      []
+    end
+  end
+
   def on_if(cond, then_clause, else_clause)
     if keyword_values(cond).any?
       @invalid = true
