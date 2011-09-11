@@ -60,16 +60,26 @@ class FoolproofParser < Ripper::SexpBuilder
 end
 
 module Foolproof
-  def self.bad_content?(content)
+  def self.validate(content)
+    # Simple string matching goes here
     ['debugger'].each do |forbidden_string|
-      return true if content.include? forbidden_string
+      content.lines.each_with_index do |content_line, index|
+        if content_line.include? forbidden_string
+          return [[:debugger_call, index + 1]]
+        end
+      end
     end
 
+    # More involved inspection of the syntax tree goes here
     parser = FoolproofParser.new(content)
     parser.parse
-    return true if parser.invalid?
+    return [[:generic_error]] if parser.invalid?
 
-    return false
+    return []
+  end
+
+  def self.bad_content?(content)
+    return validate(content).size > 0
   end
 
   def self.changed_files

@@ -18,11 +18,19 @@ end
 class FoolproofTest < Test::Unit::TestCase
   include TestFiles
 
-  def bad_content?(*args)
-    Foolproof.bad_content?(*args)
+  def validate(*args)
+    Foolproof.validate(*args)
   end
 
-  def assert_on_content_or_file(file_content_or_name, message)
+  def bad_content?(*args)
+    validate(*args).size > 0
+  end
+
+  def good_content?(*args)
+    validate(*args).size == 0
+  end
+
+  def assert_on_content_or_file(file_content_or_name, expected, message)
     content = nil
 
     if File.exists?(test_file_path file_content_or_name)
@@ -34,18 +42,34 @@ class FoolproofTest < Test::Unit::TestCase
     end
 
     unless content.nil?
-      assert yield(content), "#{file_content_or_name} #{message}"
+      assert_equal expected, yield(content), "#{file_content_or_name} #{message}"
     else
       raise "No content given"
     end
   end
 
   def assert_file_rejected(file_content_or_name)
-    assert_on_content_or_file(file_content_or_name, 'wrongly accepted') { |content| bad_content?(content) }
+    assert_on_content_or_file(
+      file_content_or_name,
+      true,
+      'wrongly accepted'
+    ) { |content| bad_content?(content) }
   end
 
   def assert_file_accepted(file_content_or_name)
-    assert_on_content_or_file(file_content_or_name, 'wrongly rejected') { |content| !bad_content?(content) }
+    assert_on_content_or_file(
+      file_content_or_name,
+      true,
+      'wrongly rejected'
+    ) { |content| good_content?(content) }
+  end
+
+  def assert_reports_errors(file_content_or_name, expected_errors)
+    assert_on_content_or_file(
+      file_content_or_name,
+      expected_errors,
+      'didn\'t correctly report errors'
+    ) { |content| validate(content) }
   end
 
   def setup
@@ -54,6 +78,12 @@ class FoolproofTest < Test::Unit::TestCase
   def test_basic
     assert_file_rejected 'forgotten_debugger.rb'
     assert_file_accepted 'good_file.rb'
+  end
+
+  def test_basic_error_report
+    assert_reports_errors 'forgotten_debugger.rb', [[:debugger_call, 2]]
+    assert_reports_errors 'hardcoded_if.rb', [[:hardcoded_boolean, 1]]
+    assert_reports_errors 'good_file.rb', []
   end
 
   def test_hardcoded_if
