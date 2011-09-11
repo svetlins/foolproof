@@ -2,19 +2,22 @@ begin
   require 'ripper'
 rescue
   puts "
-[FOOLPROOF] Warning: Committing code that's not validated - check your installation.
+[FOOLPROOF] Can't load ripper parser - check your ruby instalation. Commit aborted.
 "
+  exit(1)
 end
 
-class KwValue
-  def initialize(sexp)
-    @sexp = sexp
+class SExpWrapper
+  def initialize(s)
+    @s = s
+  end
+
+  def line_number
+    @s.last.first
   end
 
   def value
-    string_value = @sexp.last[1]
-
-    case string_value
+    case keyword_value
     when 'true'
       true
     when 'false'
@@ -24,8 +27,36 @@ class KwValue
     end
   end
 
-  def line_number
-    @sexp.last[2].first
+  def keyword_value?
+    conds = [
+      proc { @s.is_a? Array },
+      proc { @s.size == 3 },
+      proc { @s.first == :@kw },
+      proc { ['true', 'false', 'nil'].include? @s[1] }
+    ]
+
+    return conds.all? { |cond| cond.call }
+  end
+
+  def keyword_value
+    @s[1]
+  end
+
+  def keyword_values
+    if @s.is_a? Array
+      @s.map do |sub_exp|
+
+        wrapped_sub_sexp = SExpWrapper.new(sub_exp)
+
+        if wrapped_sub_sexp.keyword_value?
+          wrapped_sub_sexp
+        else
+          wrapped_sub_sexp.keyword_values
+        end
+      end.flatten
+    else
+      []
+    end
   end
 end
 
@@ -39,42 +70,11 @@ class FoolproofParser < Ripper::SexpBuilder
     @errors = []
   end
 
-  def line_number(sexp)
-    sexp.last.first
-  end
-
-  def keyword_value?(sexp)
-    conds = [
-      proc { sexp.is_a? Array },
-      proc { sexp.size == 2 },
-      proc { sexp.first == :var_ref },
-      proc { sexp.last.first == :@kw },
-      proc { ['true', 'false', 'nil'].include? sexp.last[1] }
-    ]
-
-    return conds.all? { |cond| cond.call }
-  end
-
-  def keyword_value(sexp)
-    sexp.last[1]
-  end
-
-  def keyword_values(sexp)
-    if sexp.is_a? Array
-      sexp.map do |sub_exp|
-        if keyword_value?(sub_exp)
-          KwValue.new(sub_exp)
-        else
-          keyword_values(sub_exp)
-        end
-      end.flatten
-    else
-      []
-    end
-  end
 
   def on_if(cond, then_clause, else_clause)
-    kw_values = keyword_values([cond])
+    if_condition = SExpWrapper.new(Array(cond))
+
+    kw_values = if_condition.keyword_values
 
     if kw_values.any?
       @invalid = true
@@ -135,4 +135,5 @@ module Foolproof
       end
     end
   end
+
 end
