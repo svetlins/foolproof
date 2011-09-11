@@ -6,12 +6,41 @@ rescue
 "
 end
 
+class KwValue
+  def initialize(sexp)
+    @sexp = sexp
+  end
+
+  def value
+    string_value = @sexp.last[1]
+
+    case string_value
+    when 'true'
+      true
+    when 'false'
+      false
+    when 'nil'
+      nil
+    end
+  end
+
+  def line_number
+    @sexp.last[2].first
+  end
+end
 
 class FoolproofParser < Ripper::SexpBuilder
+  attr_reader :errors
+
   def initialize(code)
     super(code)
 
     @invalid = nil
+    @errors = []
+  end
+
+  def line_number(sexp)
+    sexp.last.first
   end
 
   def keyword_value?(sexp)
@@ -34,7 +63,7 @@ class FoolproofParser < Ripper::SexpBuilder
     if sexp.is_a? Array
       sexp.map do |sub_exp|
         if keyword_value?(sub_exp)
-          keyword_value(sub_exp)
+          KwValue.new(sub_exp)
         else
           keyword_values(sub_exp)
         end
@@ -45,13 +74,17 @@ class FoolproofParser < Ripper::SexpBuilder
   end
 
   def on_if(cond, then_clause, else_clause)
-    if keyword_values([cond]).any?
+    kw_values = keyword_values([cond])
+
+    if kw_values.any?
       @invalid = true
+      @errors << [:hardcoded_boolean, kw_values.first.line_number]
     end
   end
 
   def on_parse_error(*args)
     @invalid = true
+    @errors << [:parse_error]
   end
 
   def invalid?
@@ -73,9 +106,8 @@ module Foolproof
     # More involved inspection of the syntax tree goes here
     parser = FoolproofParser.new(content)
     parser.parse
-    return [[:generic_error]] if parser.invalid?
 
-    return []
+    return parser.errors
   end
 
   def self.bad_content?(content)
