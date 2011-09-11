@@ -22,14 +22,6 @@ class FoolproofTest < Test::Unit::TestCase
     Foolproof.validate(*args)
   end
 
-  def bad_content?(*args)
-    validate(*args).size > 0
-  end
-
-  def good_content?(*args)
-    validate(*args).size == 0
-  end
-
   def assert_on_content_or_file(file_content_or_name, expected, message)
     content = nil
 
@@ -42,7 +34,8 @@ class FoolproofTest < Test::Unit::TestCase
     end
 
     unless content.nil?
-      assert_equal expected, yield(content), "#{file_content_or_name} #{message}"
+      errors = validate content
+      assert_equal expected, yield(errors), "#{file_content_or_name} #{message}. Errors: #{errors.inspect} "
     else
       raise "No content given"
     end
@@ -53,7 +46,7 @@ class FoolproofTest < Test::Unit::TestCase
       file_content_or_name,
       true,
       'wrongly accepted'
-    ) { |content| bad_content?(content) }
+    ) { |errors| errors.size > 0 }
   end
 
   def assert_file_accepted(file_content_or_name)
@@ -61,7 +54,7 @@ class FoolproofTest < Test::Unit::TestCase
       file_content_or_name,
       true,
       'wrongly rejected'
-    ) { |content| good_content?(content) }
+    ) { |errors| errors.size == 0 }
   end
 
   def assert_reports_errors(file_content_or_name, expected_errors)
@@ -69,7 +62,7 @@ class FoolproofTest < Test::Unit::TestCase
       file_content_or_name,
       expected_errors,
       'didn\'t correctly report errors'
-    ) { |content| validate(content) }
+    ) { |errors| errors }
   end
 
   def setup
@@ -92,7 +85,6 @@ class FoolproofTest < Test::Unit::TestCase
        puts 'it\\'s true!'
       end
     "
-
   end
 
   def test_complex_hardcoded_if
@@ -119,7 +111,14 @@ class FoolproofTest < Test::Unit::TestCase
     "
 
     assert_file_rejected "
-      if ((true && false || nil) # Unbalanced parens
+      if ((42 && 69 || zero) # Unbalanced parens
+        puts 'foobar'
+      end
+    "
+    assert_file_accepted "
+      if ((42 && 69 || zero))
+        puts 'foobar'
+      end
     "
   end
 
