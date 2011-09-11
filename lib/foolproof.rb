@@ -1,4 +1,11 @@
-require 'ripper'
+begin
+  require 'ripper'
+rescue
+  puts "
+[FOOLPROOF] Warning: Committing code that's not validated - check your installation.
+"
+end
+
 
 class FoolproofParser < Ripper::SexpBuilder
   def initialize(code)
@@ -52,25 +59,38 @@ class FoolproofParser < Ripper::SexpBuilder
   end
 end
 
-def bad_content?(content)
-  ['debugger'].each do |forbidden_string|
-    return true if content.include? forbidden_string
+module Foolproof
+  def self.bad_content?(content)
+    ['debugger'].each do |forbidden_string|
+      return true if content.include? forbidden_string
+    end
+
+    parser = FoolproofParser.new(content)
+    parser.parse
+    return true if parser.invalid?
+
+    return false
   end
 
-  parser = FoolproofParser.new(content)
-  parser.parse
-  return true if parser.invalid?
+  def self.changed_files
+    has_head = system('git show HEAD')
 
-  return false
-end
+    if has_head
+      `git diff-index --cached --name-only HEAD --`.strip.split("\n")
+    else
+      []
+    end
 
-def changed_files
-  has_head = system('git show HEAD')
-
-  if has_head
-    `git diff-index --cached --name-only HEAD --`.strip.split("\n")
-  else
-    []
   end
 
+  def self.run
+    changed_files.each do |file_name|
+      File.open(file_name) do |file|
+        if bad_content?(file.read)
+          puts "Aborting commit due to bad content in #{file.path}"
+          exit(1)
+        end
+      end
+    end
+  end
 end

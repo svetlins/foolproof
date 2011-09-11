@@ -18,6 +18,10 @@ end
 class FoolproofTest < Test::Unit::TestCase
   include TestFiles
 
+  def bad_content?(*args)
+    Foolproof.bad_content?(*args)
+  end
+
   def assert_on_content_or_file(file_content_or_name, message)
     content = nil
 
@@ -77,11 +81,15 @@ class FoolproofTest < Test::Unit::TestCase
     "
 
     assert_file_rejected "
-      'it's a good life'
+      'it's a good life' # Unescaped quote
+    "
+
+    assert_file_accepted "
+      'it\\'s a good life'
     "
 
     assert_file_rejected "
-      if ((true && false || nil)
+      if ((true && false || nil) # Unbalanced parens
     "
   end
 
