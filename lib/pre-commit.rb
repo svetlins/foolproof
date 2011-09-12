@@ -1,10 +1,9 @@
 #!/usr/bin/env ruby
 
 $LOAD_PATH.unshift(
-  File.join(Dir.pwd, '.git', 'hooks')
+  '/Users/svetlins/Code/foolproof/lib'
 )
 
-require 'lib/foolproof'
+require 'foolproof'
 
 Foolproof.run
-

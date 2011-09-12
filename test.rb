@@ -35,6 +35,7 @@ class FoolproofTest < Test::Unit::TestCase
 
     unless content.nil?
       errors = validate content
+
       assert_equal expected, yield(errors), "#{file_content_or_name} #{message}. Errors: #{errors.inspect} "
     else
       raise "No content given"
@@ -57,12 +58,13 @@ class FoolproofTest < Test::Unit::TestCase
     ) { |errors| errors.size == 0 }
   end
 
-  def assert_reports_errors(file_content_or_name, expected_errors)
+  def assert_reports_error(file_content_or_name, error_kind, line_number)
+
     assert_on_content_or_file(
       file_content_or_name,
-      expected_errors,
+      Error.new(error_kind, line_number),
       'didn\'t correctly report errors'
-    ) { |errors| errors }
+    ) { |errors| errors.first }
   end
 
   def setup
@@ -74,9 +76,8 @@ class FoolproofTest < Test::Unit::TestCase
   end
 
   def test_basic_error_report
-    assert_reports_errors 'forgotten_debugger.rb', [[:debugger_call, 2]]
-    assert_reports_errors 'hardcoded_if.rb', [[:hardcoded_boolean, 1]]
-    assert_reports_errors 'good_file.rb', []
+    assert_reports_error 'forgotten_debugger.rb', :debugger_call, 2
+    assert_reports_error 'hardcoded_if.rb', :hardcoded_boolean, 1
   end
 
   def test_hardcoded_if
@@ -168,9 +169,10 @@ class FoolproofTestIntegration < Test::Unit::TestCase
   end
 
   def install_pre_commit_hook
-    Dir.mkdir(File.join('.git', 'hooks', 'lib'))
+    # Dir.mkdir(File.join('.git', 'hooks', 'lib'))
 
-    FileUtils.cp(File.join(BASE_DIR, 'lib', 'foolproof.rb'), File.join('.git', 'hooks', 'lib', 'foolproof.rb'))
+    # FileUtils.cp(File.join(BASE_DIR, 'lib', 'foolproof.rb'), File.join('.git', 'hooks', 'lib', 'foolproof.rb'))
+
 
     File.open(File.join('.git', 'hooks', 'pre-commit'), 'w') do |install_to|
       File.open(File.join(BASE_DIR, 'lib', 'pre-commit.rb')) do |install_from|

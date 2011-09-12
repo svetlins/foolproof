@@ -1,113 +1,20 @@
-begin
-  require 'ripper'
-rescue
-  puts "
-[FOOLPROOF] Can't load ripper parser - check your ruby instalation. Commit aborted.
-"
-  exit(1)
-end
+$LOAD_PATH.unshift File.dirname(__FILE__)
 
-class SExpWrapper
-  def initialize(s)
-    @s = s
-  end
-
-  def line_number
-    @s.last.first
-  end
-
-  def value
-    case keyword_value
-    when 'true'
-      true
-    when 'false'
-      false
-    when 'nil'
-      nil
-    end
-  end
-
-  def keyword_value?
-    conds = [
-      proc { @s.is_a? Array },
-      proc { @s.size == 3 },
-      proc { @s.first == :@kw },
-      proc { ['true', 'false', 'nil'].include? @s[1] }
-    ]
-
-    return conds.all? { |cond| cond.call }
-  end
-
-  def keyword_value
-    @s[1]
-  end
-
-  def keyword_values
-    if @s.is_a? Array
-      @s.map do |sub_exp|
-
-        wrapped_sub_sexp = SExpWrapper.new(sub_exp)
-
-        if wrapped_sub_sexp.keyword_value?
-          wrapped_sub_sexp
-        else
-          wrapped_sub_sexp.keyword_values
-        end
-      end.flatten
-    else
-      []
-    end
-  end
-end
-
-class FoolproofParser < Ripper::SexpBuilder
-  attr_reader :errors
-
-  def initialize(code)
-    super(code)
-
-    @invalid = nil
-    @errors = []
-  end
-
-
-  def on_if(cond, then_clause, else_clause)
-    if_condition = SExpWrapper.new(Array(cond))
-
-    kw_values = if_condition.keyword_values
-
-    if kw_values.any?
-      @invalid = true
-      @errors << [:hardcoded_boolean, kw_values.first.line_number]
-    end
-  end
-
-  def on_parse_error(*args)
-    @invalid = true
-    @errors << [:parse_error]
-  end
-
-  def invalid?
-    @invalid
-  end
-end
+require 'simple_validator'
+require 'parser_validator'
+require 'error'
 
 module Foolproof
-  def self.validate(content)
-    # Simple string matching goes here
-    ['debugger'].each do |forbidden_string|
-      content.lines.each_with_index do |content_line, index|
-        if content_line.include? forbidden_string
-          return [[:debugger_call, index + 1]]
-        end
-      end
-    end
+  def self.validate(code)
 
-    # More involved inspection of the syntax tree goes here
-    parser = FoolproofParser.new(content)
-    parser.parse
+    errors = []
 
-    return parser.errors
+    # require 'ruby-debug'; debugger
+    [SimpleValidator, ParserValidator].each do |validator|
+      errors.concat validator.new(code).validate_code
+    end 
+
+    errors
   end
 
   def self.bad_content?(content)
