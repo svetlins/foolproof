@@ -9,7 +9,6 @@ module Foolproof
 
     errors = []
 
-    # require 'ruby-debug'; debugger
     [SimpleValidator, ParserValidator].each do |validator|
       errors.concat validator.new(code).validate_code
     end 

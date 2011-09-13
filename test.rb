@@ -3,6 +3,8 @@ require 'lib/foolproof.rb'
 require 'fileutils'
 
 
+
+
 module TestFiles
   BASE_DIR = Dir.pwd # Is this bad ?
   TEST_FILES_DIR = 'test_files/'
@@ -173,6 +175,8 @@ class FoolproofTestIntegration < Test::Unit::TestCase
 
     # FileUtils.cp(File.join(BASE_DIR, 'lib', 'foolproof.rb'), File.join('.git', 'hooks', 'lib', 'foolproof.rb'))
 
+    # Need to set up the load path - when installed as gem this won't be needed
+    ENV['RUBYLIB'] = File.join(BASE_DIR, 'lib')
 
     File.open(File.join('.git', 'hooks', 'pre-commit'), 'w') do |install_to|
       File.open(File.join(BASE_DIR, 'lib', 'pre-commit.rb')) do |install_from|
